@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "analyze.h": "c",
+        "globals.h": "c",
+        "sstream": "c",
+        "ratio": "c",
+        "symtab.h": "c"
+    }
+}

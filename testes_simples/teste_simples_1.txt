@@ -1,0 +1,18 @@
+/* Um programa para calcular operações
+aritméticas */
+
+void main(void)
+{	
+  int x; int y; int z;
+  x = 4;
+  y = 8;
+  z = x + y;
+  output(z);
+  z = y - x;
+  output(z);
+  z = x * y;
+  output(z);
+  z = y / x;
+  output(z);
+}
+

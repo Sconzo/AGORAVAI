@@ -1,0 +1,11 @@
+Rodando o compilador
+
+./script.sh
+./exec tests/erro1.cm
+
+Analisador lexico:
+
+lex scanner.lex
+gcc lex.yy.c
+./a.out <token de entrada>
+

@@ -15,6 +15,7 @@ int mainLocation;
 int nlabel = 0;
 int ntemp = 0;
 int nparams = -1;
+int controle = 0;
 
 Address aux;
 Address var;
@@ -22,7 +23,7 @@ Address offset;
 Address empty;
 
 const char * OpKindNames[] =  { "ADD", "SUB", "MUL", "DIV", "EQUAL","LT", "LTE", "GT", "GTE", "AND", "OR", "ASSIGN", "ALLOC", "IMMED", "LOAD", "STORE",
-                              "VEC", "GOTO", "IFF", "RET", "FUN", "END", "PARAM", "CALL", "ARG", "LAB", "HLT"  };
+                              "LOADvec", "GOTO", "IFF", "RET", "FUN", "END", "PARAM", "CALL", "ARG", "LAB", "HLT"  };
 
 
 void quad_insert (OpKind op, Address addr1, Address addr2, Address addr3) {
@@ -82,7 +83,7 @@ char * newTemp() {
   ntemp = (ntemp + 1) % 16;
   return temp;
 }
-
+// Cria um endereco vazio
 Address addr_createEmpty() {
   Address addr;
   addr.kind = Empty;
@@ -90,16 +91,16 @@ Address addr_createEmpty() {
   addr.contents.var.scope = NULL;
   return addr;
 }
-
+//Cria endereco de um inteiro ou vetor
 Address addr_createIntConst(int val) {
   Address addr;
   addr.kind = IntConst;
-  if(val == 1)addr.kind = Empty;
-  else
+  //if(val == 1)addr.kind = Empty;
+  //else
   addr.contents.val = val;
   return addr;
 }
-
+//Cria endereco de String
 Address addr_createString(char * name, char * scope) {
   Address addr;
   addr.kind = String;
@@ -129,17 +130,17 @@ static void genStmt( TreeNode * tree)
   
   switch (tree->kind.stmt) {
 
-    case ifK: 
+    case ifK: //if tem 3 filhos
       p1 = tree->child[0] ;
       p2 = tree->child[1] ;
       p3 = tree->child[2] ;
-   
+      //condicao do if
       cGen(p1);
       addr1 = aux;
    
       loc1 = location;
       quad_insert(opIFF, addr1, empty, empty);
-      
+      // if em si
       cGen(p2);
      
       loc2 = location;
@@ -149,7 +150,7 @@ static void genStmt( TreeNode * tree)
       quad_insert(opLAB, addr_createString(label, tree->attr.scope), empty, empty);
    
       quad_update(loc1, addr1, addr_createString(label, tree->attr.scope), empty);
-      
+      // else
       cGen(p3);
       if (p3 != NULL) {
       
@@ -164,26 +165,26 @@ static void genStmt( TreeNode * tree)
         quad_update(loc3, addr_createString(label, tree->attr.scope), empty, empty);
       break;
 
-    case whileK: 
+    case whileK: // while tem 2 filhos 
       p1 = tree->child[0] ;
       p2 = tree->child[1] ;
-      // inicio do while
+      // Inicio do qhile
       label = newLabel();
       quad_insert(opLAB, addr_createString(label, tree->attr.scope), empty, empty);
-      // condicao while
+      // Condicao do while
       cGen(p1);
       addr1 = aux;
-      // se condição falsa?
+      // Condicao falsa?
       loc1 = location;
       quad_insert(opIFF, addr1, empty, empty);
-      // while
+      // while em si
       cGen(p2);
       loc3 = location;
       quad_insert(opGOTO, addr_createString(label, tree->attr.scope), empty, empty);
-      // final
+      // fim do while
       label = newLabel();
       quad_insert(opLAB, addr_createString(label, tree->attr.scope), empty, empty);
-      // se condição falsa vem pra cá
+      // Se a condicao for falsa vem para essa parte
       quad_update(loc1, addr1, addr_createString(label, tree->attr.scope), empty);
       break;
 
@@ -220,7 +221,7 @@ static void genStmt( TreeNode * tree)
       break;
 
       case paramK:
-        quad_insert(opARG, addr_createString(tree->attr.name, tree->attr.scope), empty, addr_createString(tree->attr.scope, tree->attr.scope));
+        quad_insert(opARG, addr_createString(tree->attr.name, tree->attr.scope),  addr_createString(tree->attr.scope, tree->attr.scope),empty);
         p1 = tree->child[0];
         cGen(p1);
       break;
@@ -244,22 +245,22 @@ static void genStmt( TreeNode * tree)
       break;
     
     case callK:
+      nparams = 0;
       
-      nparams = tree->params;
       p1 = tree->child[0];
-  
       while (p1 != NULL) {
+        controle = -1;
+        //quad_insert(opHLT,empty,empty,empty);
         cGen(p1);
         quad_insert(opPARAM, aux, empty, empty);
-
-        nparams --;
+        nparams ++;
         p1 = p1->sibling;
       }
-      nparams = -1;
-     
+      if (strcmp(tree->attr.name,"output") == 0) nparams = 1;
+      controle = 0;
       temp = newTemp();
       aux = addr_createString(temp, tree->attr.scope);
-      quad_insert(opCALL, aux, addr_createString(tree->attr.name, tree->attr.scope), addr_createIntConst(tree->params));
+      quad_insert(opCALL, aux, addr_createString(tree->attr.name, tree->attr.scope), addr_createIntConst(nparams));
       
       break;
     
@@ -270,14 +271,13 @@ static void genStmt( TreeNode * tree)
       //if (tree->vet != -1)  
         //quad_insert(opALLOC, addr_createString(tree->attr.name, tree->attr.scope), addr_createIntConst(tree->vet), addr_createString(tree->attr.scope, tree->attr.scope));
       //else {
-        quad_insert(opALLOC, addr_createString(tree->attr.name, tree->attr.scope), addr_createIntConst(1), addr_createString(tree->attr.scope, tree->attr.scope));
+        quad_insert(opALLOC, addr_createString(tree->attr.name, tree->attr.scope), empty, addr_createString(tree->attr.scope, tree->attr.scope));
       //}
       
       break;
 
     case arrayK:
       quad_insert(opALLOC, addr_createString(tree->attr.name, tree->attr.scope), addr_createIntConst(tree->attr.len), addr_createString(tree->attr.scope, tree->attr.scope));
-      //printf("alloc,vet,global,10\n");
       break;
 
     default:
@@ -337,9 +337,23 @@ static void genExp( TreeNode * tree)
       break;
 
     case vectorK:
-      quad_insert(opALLOC, addr_createString(tree->attr.name, tree->attr.scope), addr_createIntConst(tree->attr.len), addr_createString(tree->attr.scope, tree->attr.scope));
+      aux = addr_createString(tree->attr.name, tree->attr.scope);
+      p1 = tree->child[0];
+      temp = newTemp();
+      addr1 = addr_createString(temp, tree->attr.scope);
+      addr2 = aux;
+      cGen(p1);
+      quad_insert(opVEC, addr1, addr2, aux);
+      var = addr2;
+      offset = aux;
+      aux = addr1;
+      //quad_insert(opVEC, addr_createString(tree->attr.name, tree->attr.scope), addr_createIntConst(tree->attr.len), addr_createString(tree->attr.scope, tree->attr.scope));
       break;
     
+    case vectorIdK:
+      printf("TESTE\n");
+      break;
+
     case operationK:
       
       p1 = tree->child[0];
@@ -415,6 +429,7 @@ static void genExp( TreeNode * tree)
 
 static void cGen( TreeNode * tree)
 { if (tree != NULL) 
+  
   { 
     switch (tree->nodekind)// 2 tipos de nodes, 2 casos para olhar
     {
@@ -428,10 +443,11 @@ static void cGen( TreeNode * tree)
         break;
     }
     
-    cGen(tree->sibling); //chamada recursica ate encontrar arvore vazia
+    if (controle == 0)
+      cGen(tree->sibling); //chamada recursica ate encontrar arvore vazia
   }
 }
-
+// Printa a lista de quadruplas
 void printCode() {
   QuadList q = head;
   Address a1, a2, a3;
